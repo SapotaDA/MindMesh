@@ -5,9 +5,7 @@ import ReactFlow, {
   MiniMap,
   ReactFlowProvider,
   useReactFlow,
-  useStore,
-  getNodesBounds,
-  getViewportForBounds
+  useStore
 } from 'reactflow'
 
 import type { Node, Edge } from 'reactflow'
@@ -53,21 +51,36 @@ function DiagramContent({
     try {
       const currentNodes = getNodes()
       if (currentNodes.length === 0) return
-      
+
       setIsExporting(true)
-      
-      // Calculate exact bounding box of the entire mind map
-      const nodesBounds = getNodesBounds(currentNodes)
-      
-      // Add generous padding around the exported image
+
+      // Manually compute bounding box from node positions + estimated node size
+      const NODE_W = 220
+      const NODE_H = 100
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      for (const n of currentNodes) {
+        const x = n.position.x
+        const y = n.position.y
+        const w = (n as any).width ?? NODE_W
+        const h = (n as any).height ?? NODE_H
+        if (x < minX) minX = x
+        if (y < minY) minY = y
+        if (x + w > maxX) maxX = x + w
+        if (y + h > maxY) maxY = y + h
+      }
+
       const padding = 100
-      const width = nodesBounds.width + padding * 2
-      const height = nodesBounds.height + padding * 2
-      
-      // Calculate precise viewport transform to capture everything flawlessly
-      const transform = getViewportForBounds(nodesBounds, width, height, 0.1, 5, 0)
-      
-      // Select only the viewport, naturally filtering out controls/minimap
+      const graphW = maxX - minX
+      const graphH = maxY - minY
+      const width = graphW + padding * 2
+      const height = graphH + padding * 2
+
+      // Compute scale so the whole graph fits inside the image dimensions
+      const scale = Math.min(width / graphW, height / graphH, 2)
+      const tx = padding - minX * scale
+      const ty = padding - minY * scale
+
+      // Capture only the react-flow viewport layer (excludes controls & minimap)
       const flowElement = document.querySelector('.react-flow__viewport') as HTMLElement
       if (!flowElement) return
 
@@ -78,7 +91,8 @@ function DiagramContent({
         style: {
           width: `${width}px`,
           height: `${height}px`,
-          transform: `translate(${transform.x + padding}px, ${transform.y + padding}px) scale(${transform.zoom})`
+          transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+          transformOrigin: 'top left'
         }
       })
 

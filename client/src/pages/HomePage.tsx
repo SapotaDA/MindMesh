@@ -24,7 +24,7 @@ export default function HomePage() {
 
     setIsLoading(true)
     try {
-      const diagram = await generateDiagram(trimmed, apiUrl)
+      const diagram = await generateDiagram(trimmed)
       setNodes(
         diagram.nodes.map((n: any) => ({
           ...n,

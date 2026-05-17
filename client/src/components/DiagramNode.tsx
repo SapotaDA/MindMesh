@@ -1,4 +1,6 @@
+// @ts-ignore - reactflow v11 exports these but tsc with Bundler resolution gets confused
 import { Handle, Position } from 'reactflow'
+// @ts-ignore
 import type { NodeProps } from 'reactflow'
 
 type Data = {
