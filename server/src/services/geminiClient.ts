@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-const DEFAULT_MODEL = 'gemini-2.0-flash'
+const DEFAULT_MODEL = 'gemini-2.5-flash'
 
 type CallGeminiArgs = {
   prompt: string
