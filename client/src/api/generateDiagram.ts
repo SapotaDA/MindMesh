@@ -12,8 +12,11 @@ export type DiagramEdge = {
   target: string
 }
 
-export async function generateDiagram(notes: string, AIzaSyAhhdvf5LJqu7YzFGcU5YPy53QnCVtFjr8: string) {
-  const res = await fetch(`${AIzaSyAhhdvf5LJqu7YzFGcU5YPy53QnCVtFjr8}/generate-diagram`, {
+export async function generateDiagram(notes: string) { 
+
+  const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/generate-diagram`, {
+
+
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ notes })

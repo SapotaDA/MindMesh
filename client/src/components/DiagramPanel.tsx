@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ReactFlow, {
   Background,
   Controls,
@@ -34,14 +34,17 @@ function DiagramContent({
   const flowWrapper = useRef<HTMLDivElement | null>(null)
   const { fitView } = useReactFlow()
 
-  const didFit = useRef(false)
+  const lastNodesLength = useRef(0)
 
-  // Fit viewport on first meaningful update
-  useMemo(() => {
-    if (!didFit.current && nodes.length) {
-      didFit.current = true
-      queueMicrotask(() => fitView({ padding: 0.2, duration: 600 }))
+  // Fit viewport on meaningful updates
+  useEffect(() => {
+    if (nodes.length > 0 && lastNodesLength.current === 0) {
+      const timer = setTimeout(() => {
+        fitView({ padding: 0.2, duration: 600 })
+      }, 100)
+      return () => clearTimeout(timer)
     }
+    lastNodesLength.current = nodes.length
   }, [nodes, fitView])
 
   const zoom = useStore((s: any) => s.transform[2])

@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-const DEFAULT_MODEL = 'gemini-2.5-flash'
+const DEFAULT_MODEL = 'gemini-2.0-flash'
 
 type CallGeminiArgs = {
   prompt: string
@@ -28,7 +28,8 @@ export async function callGemini({ prompt, systemInstructions }: CallGeminiArgs)
     ],
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 2048
+      maxOutputTokens: 2048,
+      responseMimeType: 'application/json'
     }
   }
 

@@ -7,12 +7,21 @@ export function parseOnlyDiagramJson(raw: string): { nodes: any[]; edges: any[] 
   // Extract first JSON object if there is surrounding text.
   const firstBrace = cleaned.indexOf('{')
   const lastBrace = cleaned.lastIndexOf('}')
-  const candidate = firstBrace >= 0 && lastBrace > firstBrace ? cleaned.slice(firstBrace, lastBrace + 1) : cleaned
+  let candidate = firstBrace >= 0 && lastBrace > firstBrace ? cleaned.slice(firstBrace, lastBrace + 1) : cleaned
+
+  // Strip trailing commas before closing braces/brackets to prevent JSON parse errors
+  candidate = candidate.replace(/,(\s*[\]}])/g, '$1')
+
+  // Strip single-line JS-style comments (e.g., // comment) that LLMs occasionally insert
+  candidate = candidate.replace(/(?<!https?:)\/\/.*$/gm, '')
 
   let parsed: any
   try {
     parsed = JSON.parse(candidate)
   } catch (e) {
+    console.error('Failed to parse Gemini response as JSON. Raw response:', raw)
+    console.error('Parsing candidate:', candidate)
+    console.error('Error details:', e)
     throw new Error('Gemini did not return valid JSON')
   }
 
