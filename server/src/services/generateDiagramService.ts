@@ -81,10 +81,25 @@ ${notes}
  * identifies subjects/themes, and lays them out as structured React Flow nodes & edges.
  */
 export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: any[] } {
-  const lines = notes
+  let lines = notes
     .split('\n')
     .map(line => line.trim())
     .filter(line => line.length > 0)
+
+  // Smart Preprocessor: If the input consists of a single large continuous paragraph (or extremely long lines),
+  // split it by sentences to extract structured, logical key points instead of treating it as one massive block.
+  if (lines.length <= 2 && lines.some(line => line.length > 120)) {
+    const allSentences: string[] = []
+    lines.forEach(line => {
+      // Split by punctuation marks followed by spaces
+      const sentences = line
+        .split(/(?<=[.!?])\s+/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0)
+      allSentences.push(...sentences)
+    })
+    lines = allSentences
+  }
 
   if (lines.length === 0) {
     return {
@@ -182,9 +197,14 @@ export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: a
     const isSequential = cat.items.some(item => {
       const lower = item.toLowerCase()
       return (
-        /^(step|then|after|finally|first|second|third|\d+[\.\)])/i.test(lower) ||
+        /^(step|then|after|finally|first|second|third|sends|receives|\d+[\.\)])/i.test(lower) ||
         lower.includes('then') ||
         lower.includes('leads to') ||
+        lower.includes('sends') ||
+        lower.includes('receives') ||
+        lower.includes('processes') ||
+        lower.includes('workflow') ||
+        lower.includes('pipeline') ||
         lower.includes('->') ||
         lower.includes('=>')
       )
