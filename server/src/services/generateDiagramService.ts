@@ -67,6 +67,142 @@ ${notes}
     }
   }
 
-  throw lastError || new Error('Failed to generate valid diagram JSON after multiple attempts')
+  console.log('[Fallback] Gemini API is currently unavailable or rate-limited. Serving intelligent local fallback mind-map layout.')
+  return generateFallbackDiagram(notes)
 }
+
+/**
+ * Intelligent local mind-map generator that parses notes line-by-line,
+ * identifies subjects/themes, and lays them out as structured React Flow nodes & edges.
+ */
+export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: any[] } {
+  const lines = notes
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+
+  if (lines.length === 0) {
+    return {
+      nodes: [
+        {
+          id: 'root',
+          position: { x: 0, y: 0 },
+          data: { label: 'Empty Notes' }
+        }
+      ],
+      edges: []
+    }
+  }
+
+  interface Category {
+    title: string
+    items: string[]
+  }
+
+  const categories: Category[] = []
+  let currentCategory: Category | null = null
+
+  for (const line of lines) {
+    // A line is considered a bullet/fact (rather than a category header) if:
+    // 1. It starts with common bullet symbols or numbering
+    // 2. It ends with a period punctuation mark
+    // 3. It is relatively long (longer than 30 characters)
+    const startsWithBulletSymbol = /^[-\*\•\d+\.\)]/.test(line)
+    const endsWithPeriod = line.endsWith('.')
+    const isLong = line.length > 30
+
+    const isBullet = startsWithBulletSymbol || endsWithPeriod || isLong
+
+    if (!isBullet) {
+      // It's a category header!
+      currentCategory = { title: line, items: [] }
+      categories.push(currentCategory)
+    } else {
+      // It's a list item or detailed fact under a category
+      const cleanItem = line.replace(/^[-\*\•\d+\.\)\s]+/, '').trim()
+      if (cleanItem) {
+        if (!currentCategory) {
+          // If no category header was found yet, create a default one
+          currentCategory = { title: 'General Notes', items: [] }
+          categories.push(currentCategory)
+        }
+        currentCategory.items.push(cleanItem)
+      }
+    }
+  }
+
+  // If no category blocks were populated, group everything under a default category
+  if (categories.length === 0) {
+    categories.push({
+      title: 'General Notes',
+      items: lines.map(line => line.replace(/^[-\*\•\d+\.\)\s]+/, '').trim()).filter(Boolean)
+    })
+  }
+
+  const nodes: any[] = []
+  const edges: any[] = []
+
+  // 1. Central Root Node
+  nodes.push({
+    id: 'root',
+    position: { x: 0, y: 0 },
+    data: { label: 'Knowledge Map' }
+  })
+
+  // Horizontal layout parameters for categories
+  const numCategories = categories.length
+  const xSpacing = 350
+  const startX = -((numCategories - 1) * xSpacing) / 2
+
+  categories.forEach((cat, catIdx) => {
+    const catId = `cat_${catIdx}`
+    const catX = startX + catIdx * xSpacing
+    const catY = 150
+
+    // 2. Category Header Node
+    nodes.push({
+      id: catId,
+      position: { x: catX, y: catY },
+      data: { label: cat.title }
+    })
+
+    // Connect Root -> Category
+    edges.push({
+      id: `e-root-${catId}`,
+      source: 'root',
+      target: catId
+    })
+
+    // 3. Child nodes arranged vertically under the category
+    let prevNodeId = catId
+    cat.items.forEach((item, itemIdx) => {
+      const itemId = `item_${catIdx}_${itemIdx}`
+      const itemY = 300 + itemIdx * 150
+
+      // Shorten display label if it's exceptionally long to maintain node aesthetics
+      let displayLabel = item
+      if (displayLabel.length > 40) {
+        displayLabel = displayLabel.slice(0, 37) + '...'
+      }
+
+      nodes.push({
+        id: itemId,
+        position: { x: catX, y: itemY },
+        data: { label: displayLabel }
+      })
+
+      // Connect sequentially: Category -> Sub-node 1 -> Sub-node 2 ...
+      edges.push({
+        id: `e-${prevNodeId}-${itemId}`,
+        source: prevNodeId,
+        target: itemId
+      })
+
+      prevNodeId = itemId
+    })
+  })
+
+  return { nodes, edges }
+}
+
 
