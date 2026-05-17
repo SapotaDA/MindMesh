@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import ReactFlow, {
   Background,
   Controls,
@@ -15,10 +15,6 @@ import jsPDF from 'jspdf'
 import LoadingOverlay from './LoadingOverlay'
 import DiagramNode from './DiagramNode'
 
-const nodeTypes = {
-  diagramNode: DiagramNode
-}
-
 function DiagramContent({
   nodes,
   edges,
@@ -28,6 +24,8 @@ function DiagramContent({
   edges: Edge[]
   isLoading: boolean
 }) {
+  const nodeTypes = useMemo(() => ({ diagramNode: DiagramNode }), [])
+  
   const flowWrapper = useRef<HTMLDivElement | null>(null)
   const { fitView, getNodes } = useReactFlow()
   const [isExporting, setIsExporting] = useState(false)
