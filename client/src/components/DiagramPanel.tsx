@@ -54,33 +54,19 @@ function DiagramContent({
 
       setIsExporting(true)
 
-      // Manually compute bounding box from node positions + estimated node size
-      const NODE_W = 220
-      const NODE_H = 100
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-      for (const n of currentNodes) {
-        const x = n.position.x
-        const y = n.position.y
-        const w = (n as any).width ?? NODE_W
-        const h = (n as any).height ?? NODE_H
-        if (x < minX) minX = x
-        if (y < minY) minY = y
-        if (x + w > maxX) maxX = x + w
-        if (y + h > maxY) maxY = y + h
-      }
+      // 1. We must use React Flow's internal math engine to get the exact bounds
+      // @ts-ignore
+      const { getNodesBounds, getViewportForBounds } = await import('reactflow')
+      
+      const nodesBounds = getNodesBounds(currentNodes)
+      
+      const padding = 150
+      const width = nodesBounds.width + padding * 2
+      const height = nodesBounds.height + padding * 2
 
-      const padding = 100
-      const graphW = maxX - minX
-      const graphH = maxY - minY
-      const width = graphW + padding * 2
-      const height = graphH + padding * 2
-
-      // Compute scale so the whole graph fits inside the image dimensions
-      const scale = Math.min(width / graphW, height / graphH, 2)
-      const tx = padding - minX * scale
-      const ty = padding - minY * scale
-
-      // Capture only the react-flow viewport layer (excludes controls & minimap)
+      // Calculate perfect transform to center and scale everything
+      const transform = getViewportForBounds(nodesBounds, width, height, 0.1, 5, 0)
+      
       const flowElement = document.querySelector('.react-flow__viewport') as HTMLElement
       if (!flowElement) return
 
@@ -91,8 +77,12 @@ function DiagramContent({
         style: {
           width: `${width}px`,
           height: `${height}px`,
-          transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
-          transformOrigin: 'top left'
+          transform: `translate(${transform.x + padding}px, ${transform.y + padding}px) scale(${transform.zoom})`,
+          transformOrigin: 'top left',
+          // CRITICAL FIX: Forces html-to-image clone to ignore original container constraints
+          position: 'absolute',
+          top: '0',
+          left: '0'
         }
       })
 
