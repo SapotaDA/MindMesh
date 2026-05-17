@@ -119,7 +119,4 @@ To compile and package the assets for high-performance deployments:
     npm run build
     ```
 
----
 
-## 📝 License
-This project is licensed under the [MIT License](LICENSE).
