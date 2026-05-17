@@ -6,10 +6,34 @@
   color-scheme: dark;
 }
 
-/* Make React Flow blend into the dark theme */
-.react-flow__node {
-  border-radius: 14px !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+/* Make React Flow custom nodes fully transparent and clean */
+.react-flow__node-diagramNode {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Make edges glow and look premium on the dark background */
+.react-flow__edge-path {
+  stroke: rgba(99, 102, 241, 0.5) !important;
+  stroke-width: 2px !important;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: rgba(6, 182, 212, 0.85) !important;
+  stroke-width: 3px !important;
+}
+
+.react-flow__edge-interaction {
+  stroke-width: 15px !important;
+}
+
+/* Glow utility for custom glassmorphic cards */
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15), 0 0 40px rgba(6, 182, 212, 0.05);
 }
 
 /* Smooth font rendering */

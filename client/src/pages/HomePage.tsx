@@ -48,20 +48,30 @@ export default function HomePage() {
 
   async function handleExportPng() {
     try {
-      const mod = await import('reactflow')
+      const flowElement = document.querySelector('.react-flow') as HTMLElement
+      if (!flowElement) {
+        toast('Export failed: Canvas element not found.')
+        return
+      }
 
-      // The library provides toPng; rely on current flow instance via DOM.
-      // We'll use DOM-based export fallback.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { toPng } = mod as any
-      const canvas = await toPng(document.querySelector('.react-flow') as any, {
-        backgroundColor: '#070A12'
+      const { toPng } = await import('html-to-image')
+      const canvas = await toPng(flowElement, {
+        backgroundColor: '#070A12',
+        cacheBust: true,
+        filter: (node: any) => {
+          // Filter out navigation controls and helper widgets from the exported image
+          return (
+            !node?.classList?.contains('react-flow__controls') &&
+            !node?.classList?.contains('react-flow__minimap')
+          )
+        }
       })
       const link = document.createElement('a')
       link.download = 'mindmesh-diagram.png'
       link.href = canvas
       link.click()
-    } catch {
+    } catch (e) {
+      console.error('Export failed:', e)
       toast('Export failed. Please try again.')
     }
   }
