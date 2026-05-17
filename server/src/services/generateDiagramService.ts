@@ -1,28 +1,33 @@
 import { callGemini } from './geminiClient'
 import { parseOnlyDiagramJson } from '../utils/parseOnlyDiagramJson'
 
-const SYSTEM_INSTRUCTIONS = `You are an expert diagram architect and mind map designer. You excel at grouping disjointed notes into highly structured, beautiful, hierarchical flowcharts with perfect non-overlapping layouts.`
+const SYSTEM_INSTRUCTIONS = `You are a world-class diagram architect, knowledge engineer, and mind-map layout specialist.
+Your goal is to parse unstructured, technical notes and transform them into logically rigorous, highly valid, and visually flawless mind maps.
+
+Quality Standards:
+1. **Core Fact Extraction**: Extract only the absolute key points, crucial technical facts, and valid concepts. Do not include fluff, conversational filler, or redundant text.
+2. **Strict Logical Rigor**:
+   - Connection types must be logical. If sub-items are independent facts under a category, they must branch in parallel directly from the category node (Category -> Sub-point 1, Category -> Sub-point 2).
+   - If sub-items represent a sequential step-by-step process or logical progression (e.g. "Step 1 -> Step 2 -> Step 3"), connect them sequentially in a vertical chain.
+3. **No Hallucinations**: Only represent facts explicitly stated or directly inferred from the user's notes. Do not invent unrelated technical details.
+4. **Visually Perfect Non-overlapping Coordinates**: Ensure horizontal spacing of at least 350px and vertical spacing of at least 150px. Alternating or offsetting coordinates is encouraged to prevent crossing lines.`
 
 export async function generateDiagramService(notes: string): Promise<{ nodes: any[]; edges: any[] }> {
   const prompt = `Analyze the following user notes and convert them into a highly intelligent, structured mind map/flowchart diagram.
 
-Architecture Rules:
-1. **Hierarchical Grouping**:
-   - Identify high-level categories, subjects, or themes in the notes.
-   - If there are multiple separate categories (e.g., "Web Development", "AI/Tech", "Career"), create a single central root node (e.g., "Knowledge Map").
-   - Create category nodes (e.g., "Web Dev", "AI & Tech") that branch out from the central root node.
-   - Group the specific facts, details, or steps under their corresponding category nodes.
-   - If there is only one linear topic, create a clear start-to-finish flowchart.
-
-2. **Perfect Visual Layout (Coordinates)**:
-   - Place the central root node at x: 0, y: 0.
-   - Space the category nodes widely along the X-axis (e.g., x: -600, -300, 0, 300, 600) and slightly down the Y-axis (y: 150).
-   - Lay out the sub-points, details, or processes vertically under each category node (e.g., y: 300, 450, 600...) maintaining the same category X coordinate, or staggered slightly for readability.
-   - Avoid node overlaps at all costs by keeping X spacing at least 300px and Y spacing at least 150px.
-
-3. **Node & Edge Specifications**:
-   - Keep node labels concise, clean, and highly professional (maximum 6 words per label).
-   - Connect the nodes logically with edges: Root -> Category -> Sub-point 1 -> Sub-point 2, etc.
+Core Information & Logical Linking Rules:
+1. **Accurate Fact Extraction**:
+   - Focus exclusively on the valid core key points and technical principles in the text.
+   - Summarize every key point into a concise, professional label (maximum 5-6 words) that retains its complete meaning and validity.
+2. **Logical Flowchart Structure**:
+   - Root Node: Create a single central "Knowledge Map" node at (0, 0) if there are multiple topics.
+   - Category Nodes: Branch high-level categories/subjects out from the root at y: 150.
+   - Parallel Key Points: If points are independent facts or examples under a category (e.g., facts about React), branch them **in parallel** directly out of their Category node (Category -> Point 1, Category -> Point 2).
+   - Sequential Processes: If points represent a process, chronological sequence, or logical cause-and-effect chain (e.g., step 1 leads to step 2), link them **sequentially** in a linear chain (Step 1 -> Step 2 -> Step 3).
+3. **Flawless Layout Math**:
+   - Place categories widely along the X-axis (e.g., -600, -300, 0, 300, 600) to keep columns completely separated.
+   - For parallel branching under a category, stagger or offset their X coordinates slightly (e.g., catX - 45, catX + 45) or arrange them vertically with direct edge connections from the category, ensuring no overlaps occur.
+   - Avoid crossings and overlapping nodes.
 
 Required JSON Schema:
 {
@@ -30,7 +35,7 @@ Required JSON Schema:
     {
       "id": "root",
       "position": { "x": 0, "y": 0 },
-      "data": { "label": "Notes Overview" }
+      "data": { "label": "Knowledge Map" }
     },
     {
       "id": "cat1",
@@ -173,11 +178,26 @@ export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: a
       target: catId
     })
 
-    // 3. Child nodes arranged vertically under the category
+    // Detect if this entire category represents a sequence/progression or independent facts
+    const isSequential = cat.items.some(item => {
+      const lower = item.toLowerCase()
+      return (
+        /^(step|then|after|finally|first|second|third|\d+[\.\)])/i.test(lower) ||
+        lower.includes('then') ||
+        lower.includes('leads to') ||
+        lower.includes('->') ||
+        lower.includes('=>')
+      )
+    })
+
     let prevNodeId = catId
     cat.items.forEach((item, itemIdx) => {
       const itemId = `item_${catIdx}_${itemIdx}`
       const itemY = 300 + itemIdx * 150
+
+      // To spread parallel child nodes slightly horizontally (preventing crossing lines and looking fanned out)
+      const xOffset = isSequential ? 0 : (itemIdx % 2 === 0 ? -45 : 45)
+      const itemX = catX + xOffset
 
       // Shorten display label if it's exceptionally long to maintain node aesthetics
       let displayLabel = item
@@ -187,18 +207,26 @@ export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: a
 
       nodes.push({
         id: itemId,
-        position: { x: catX, y: itemY },
+        position: { x: itemX, y: itemY },
         data: { label: displayLabel }
       })
 
-      // Connect sequentially: Category -> Sub-node 1 -> Sub-node 2 ...
-      edges.push({
-        id: `e-${prevNodeId}-${itemId}`,
-        source: prevNodeId,
-        target: itemId
-      })
-
-      prevNodeId = itemId
+      if (isSequential) {
+        // Sequential progression layout
+        edges.push({
+          id: `e-${prevNodeId}-${itemId}`,
+          source: prevNodeId,
+          target: itemId
+        })
+        prevNodeId = itemId
+      } else {
+        // Parallel branching layout
+        edges.push({
+          id: `e-${catId}-${itemId}`,
+          source: catId,
+          target: itemId
+        })
+      }
     })
   })
 
