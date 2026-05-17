@@ -5,16 +5,17 @@ import ReactFlow, {
   MiniMap,
   ReactFlowProvider,
   useReactFlow,
-  useStore
+  useStore,
+  getNodesBounds,
+  getViewportForBounds
 } from 'reactflow'
 
 import type { Node, Edge } from 'reactflow'
-
+import * as htmlToImage from 'html-to-image'
+import jsPDF from 'jspdf'
 
 import LoadingOverlay from './LoadingOverlay'
 import DiagramNode from './DiagramNode'
-
-
 
 const nodeTypes = {
   diagramNode: DiagramNode
@@ -23,16 +24,15 @@ const nodeTypes = {
 function DiagramContent({
   nodes,
   edges,
-  isLoading,
-  onExportPng
+  isLoading
 }: {
   nodes: Node[]
   edges: Edge[]
   isLoading: boolean
-  onExportPng: () => Promise<void>
 }) {
   const flowWrapper = useRef<HTMLDivElement | null>(null)
-  const { fitView } = useReactFlow()
+  const { fitView, getNodes } = useReactFlow()
+  const [isExporting, setIsExporting] = useState(false)
 
   const lastNodesLength = useRef(0)
 
@@ -49,6 +49,59 @@ function DiagramContent({
 
   const zoom = useStore((s: any) => s.transform[2])
 
+  const handleExport = async (format: 'png' | 'pdf') => {
+    try {
+      const currentNodes = getNodes()
+      if (currentNodes.length === 0) return
+      
+      setIsExporting(true)
+      
+      // Calculate exact bounding box of the entire mind map
+      const nodesBounds = getNodesBounds(currentNodes)
+      
+      // Add generous padding around the exported image
+      const padding = 100
+      const width = nodesBounds.width + padding * 2
+      const height = nodesBounds.height + padding * 2
+      
+      // Calculate precise viewport transform to capture everything flawlessly
+      const transform = getViewportForBounds(nodesBounds, width, height, 0.1, 5, 0)
+      
+      // Select only the viewport, naturally filtering out controls/minimap
+      const flowElement = document.querySelector('.react-flow__viewport') as HTMLElement
+      if (!flowElement) return
+
+      const dataUrl = await htmlToImage.toPng(flowElement, {
+        backgroundColor: '#070A12',
+        width,
+        height,
+        style: {
+          width: `${width}px`,
+          height: `${height}px`,
+          transform: `translate(${transform.x + padding}px, ${transform.y + padding}px) scale(${transform.zoom})`
+        }
+      })
+
+      if (format === 'png') {
+        const link = document.createElement('a')
+        link.download = 'mindmesh-diagram.png'
+        link.href = dataUrl
+        link.click()
+      } else if (format === 'pdf') {
+        const pdf = new jsPDF({
+          orientation: width > height ? 'landscape' : 'portrait',
+          unit: 'px',
+          format: [width, height]
+        })
+        pdf.addImage(dataUrl, 'PNG', 0, 0, width, height)
+        pdf.save('mindmesh-diagram.pdf')
+      }
+    } catch (err) {
+      console.error('Export failed', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   return (
     <div ref={flowWrapper} className="relative h-[520px] sm:h-[580px] rounded-2xl overflow-hidden border border-white/10 bg-black/20">
@@ -67,10 +120,7 @@ function DiagramContent({
       >
         <Background variant="dots" gap={22} size={1} color="rgba(255,255,255,0.08)" />
         <MiniMap
-          nodeColor={(n: any) => {
-            return 'rgba(99,102,241,0.35)'
-          }}
-
+          nodeColor={() => 'rgba(99,102,241,0.35)'}
           maskColor="rgba(0,0,0,0.65)"
         />
         <Controls
@@ -85,16 +135,33 @@ function DiagramContent({
       </ReactFlow>
 
       {isLoading && <LoadingOverlay />}
+      
+      {isExporting && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-6 h-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+            <div className="text-sm font-semibold text-white tracking-widest uppercase">Exporting Diagram...</div>
+          </div>
+        </div>
+      )}
 
       <div className="absolute top-4 right-4 flex items-center gap-2">
-        <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs text-white/70 backdrop-blur">
+        <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-white/70 backdrop-blur">
           Zoom: {Math.round(zoom * 100)}%
         </div>
         <button
-          onClick={onExportPng}
-          className="px-3 py-2 rounded-full bg-gradient-to-r from-indigo-500/20 to-cyan-500/20 border border-white/10 hover:border-white/20 transition text-xs"
+          onClick={() => handleExport('png')}
+          disabled={isExporting || nodes.length === 0}
+          className="px-4 py-1.5 rounded-full bg-gradient-to-r from-indigo-500/20 to-cyan-500/20 border border-white/10 hover:border-white/20 transition text-xs font-semibold disabled:opacity-50"
         >
           Export PNG
+        </button>
+        <button
+          onClick={() => handleExport('pdf')}
+          disabled={isExporting || nodes.length === 0}
+          className="px-4 py-1.5 rounded-full bg-gradient-to-r from-rose-500/20 to-amber-500/20 border border-white/10 hover:border-white/20 transition text-xs font-semibold disabled:opacity-50"
+        >
+          Export PDF
         </button>
       </div>
     </div>
@@ -104,17 +171,15 @@ function DiagramContent({
 export default function DiagramPanel({
   nodes,
   edges,
-  isLoading,
-  onExportPng
+  isLoading
 }: {
   nodes: Node[]
   edges: Edge[]
   isLoading: boolean
-  onExportPng: () => Promise<void>
 }) {
   return (
     <ReactFlowProvider>
-      <DiagramContent nodes={nodes} edges={edges} isLoading={isLoading} onExportPng={onExportPng} />
+      <DiagramContent nodes={nodes} edges={edges} isLoading={isLoading} />
     </ReactFlowProvider>
   )
 }

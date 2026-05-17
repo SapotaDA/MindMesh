@@ -46,36 +46,6 @@ export default function HomePage() {
     }
   }
 
-  async function handleExportPng() {
-    try {
-      const flowElement = document.querySelector('.react-flow') as HTMLElement
-      if (!flowElement) {
-        toast('Export failed: Canvas element not found.')
-        return
-      }
-
-      const { toPng } = await import('html-to-image')
-      const canvas = await toPng(flowElement, {
-        backgroundColor: '#070A12',
-        cacheBust: true,
-        filter: (node: any) => {
-          // Filter out navigation controls and helper widgets from the exported image
-          return (
-            !node?.classList?.contains('react-flow__controls') &&
-            !node?.classList?.contains('react-flow__minimap')
-          )
-        }
-      })
-      const link = document.createElement('a')
-      link.download = 'mindmesh-diagram.png'
-      link.href = canvas
-      link.click()
-    } catch (e) {
-      console.error('Export failed:', e)
-      toast('Export failed. Please try again.')
-    }
-  }
-
   function handleCopyNotes() {
     navigator.clipboard.writeText(notes)
     toast('Notes copied')
@@ -125,7 +95,7 @@ export default function HomePage() {
                   </div>
                   <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
                     <div className="text-sm font-semibold">Exportable</div>
-                    <div className="text-xs text-white/60 mt-1">Save your diagram as PNG.</div>
+                    <div className="text-xs text-white/60 mt-1">Save your diagram as PNG or PDF.</div>
                   </div>
                 </div>
               </div>
@@ -154,7 +124,7 @@ export default function HomePage() {
               <div className="text-xs text-white/60">Zoom, pan, and export anytime.</div>
             </div>
 
-            <DiagramPanel nodes={nodes} edges={edges} isLoading={false} onExportPng={handleExportPng} />
+            <DiagramPanel nodes={nodes} edges={edges} isLoading={isLoading} />
           </section>
 
           <footer className="mt-10 text-center text-xs text-white/50">
