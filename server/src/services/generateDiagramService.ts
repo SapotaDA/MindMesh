@@ -1,56 +1,73 @@
 import { callGemini } from './geminiClient'
 import { parseOnlyDiagramJson } from '../utils/parseOnlyDiagramJson'
 
-const SYSTEM_INSTRUCTIONS = `You are a world-class diagram architect, knowledge engineer, and mind-map layout specialist.
-Your goal is to parse unstructured, technical notes and transform them into logically rigorous, highly valid, and visually flawless mind maps.
+const SYSTEM_INSTRUCTIONS = `You are an advanced AI system specialized in converting unstructured notes into intelligent visual diagrams for React Flow.
+Your goal is to deeply analyze the user's notes and generate a professional, visually organized, and logically connected flowchart structure.
 
-Quality Standards:
-1. **Core Fact Extraction**: Extract only the absolute key points, crucial technical facts, and valid concepts. Do not include fluff, conversational filler, or redundant text.
-2. **Strict Logical Rigor**:
-   - Connection types must be logical. If sub-items are independent facts under a category, they must branch in parallel directly from the category node (Category -> Sub-point 1, Category -> Sub-point 2).
-   - If sub-items represent a sequential step-by-step process or logical progression (e.g. "Step 1 -> Step 2 -> Step 3"), connect them sequentially in a vertical chain.
-3. **No Hallucinations**: Only represent facts explicitly stated or directly inferred from the user's notes. Do not invent unrelated technical details.
-4. **Visually Perfect Non-overlapping Coordinates**: Ensure horizontal spacing of at least 350px and vertical spacing of at least 150px. Alternating or offsetting coordinates is encouraged to prevent crossing lines.`
+TASKS:
+1. Understand the semantic meaning of the notes
+2. Detect workflows, dependencies, hierarchies, and relationships
+3. Identify:
+   - main processes (category: process)
+   - sub-processes (category: process)
+   - decision points (category: decision)
+   - parallel flows (category: process)
+   - loops/repeated actions (category: process)
+4. Remove redundant information
+5. Merge similar concepts intelligently
+6. Generate a clean and readable diagram structure
+7. Automatically determine flow direction
+8. Create balanced node spacing for visualization (horizontal spacing at least 350px, vertical at least 150px)
+9. Group related concepts together
+10. Prioritize important steps in the workflow
+
+OUTPUT REQUIREMENTS:
+Return ONLY valid JSON.
+
+FORMAT:
+{
+  "nodes": [],
+  "edges": []
+}
+
+NODE FORMAT:
+{
+  "id": "unique_id",
+  "type": "diagramNode",
+  "position": {
+    "x": number,
+    "y": number
+  },
+  "data": {
+    "label": "Short concise label (max 5 words)",
+    "description": "Brief explanation or description",
+    "category": "process | decision | input | output | group"
+  }
+}
+
+EDGE FORMAT:
+{
+  "id": "edge_id",
+  "source": "source_node_id",
+  "target": "target_node_id",
+  "label": "optional relationship label",
+  "animated": true,
+  "type": "smoothstep"
+}
+
+ADVANCED RULES:
+- Keep labels concise and professional
+- Avoid duplicate nodes
+- Detect chronological order automatically
+- Detect cause-effect relationships
+- Detect branching logic
+- Generate scalable node positions: Root node should start near top-center (x: 0, y: 0)
+- Parallel flows should branch horizontally (stagger X by at least 350px)
+- Avoid overlapping nodes at all costs
+- Return JSON only. No markdown, no extra text.`
 
 export async function generateDiagramService(notes: string): Promise<{ nodes: any[]; edges: any[] }> {
-  const prompt = `Analyze the following user notes and convert them into a highly intelligent, structured mind map/flowchart diagram.
-
-Core Information & Logical Linking Rules:
-1. **Accurate Fact Extraction**:
-   - Focus exclusively on the valid core key points and technical principles in the text.
-   - Summarize every key point into a concise, professional label (maximum 5-6 words) that retains its complete meaning and validity.
-2. **Logical Flowchart Structure**:
-   - Root Node: Create a single central "Knowledge Map" node at (0, 0) if there are multiple topics.
-   - Category Nodes: Branch high-level categories/subjects out from the root at y: 150.
-   - Parallel Key Points: If points are independent facts or examples under a category (e.g., facts about React), branch them **in parallel** directly out of their Category node (Category -> Point 1, Category -> Point 2).
-   - Sequential Processes: If points represent a process, chronological sequence, or logical cause-and-effect chain (e.g., step 1 leads to step 2), link them **sequentially** in a linear chain (Step 1 -> Step 2 -> Step 3).
-3. **Flawless Layout Math**:
-   - Place categories widely along the X-axis (e.g., -600, -300, 0, 300, 600) to keep columns completely separated.
-   - For parallel branching under a category, stagger or offset their X coordinates slightly (e.g., catX - 45, catX + 45) or arrange them vertically with direct edge connections from the category, ensuring no overlaps occur.
-   - Avoid crossings and overlapping nodes.
-
-Required JSON Schema:
-{
-  "nodes": [
-    {
-      "id": "root",
-      "position": { "x": 0, "y": 0 },
-      "data": { "label": "Knowledge Map" }
-    },
-    {
-      "id": "cat1",
-      "position": { "x": -300, "y": 150 },
-      "data": { "label": "Web Development" }
-    }
-  ],
-  "edges": [
-    {
-      "id": "e-root-cat1",
-      "source": "root",
-      "target": "cat1"
-    }
-  ]
-}
+  const prompt = `Analyze the following user notes and convert them into a highly intelligent, structured mind map/flowchart diagram following the requested React Flow advanced JSON format.
 
 User Notes:
 """
@@ -165,8 +182,13 @@ export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: a
   // 1. Central Root Node
   nodes.push({
     id: 'root',
+    type: 'diagramNode',
     position: { x: 0, y: 0 },
-    data: { label: 'Knowledge Map' }
+    data: { 
+      label: 'Knowledge Map',
+      description: 'Starting entry point of visual notes',
+      category: 'input'
+    }
   })
 
   // Horizontal layout parameters for categories
@@ -182,15 +204,22 @@ export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: a
     // 2. Category Header Node
     nodes.push({
       id: catId,
+      type: 'diagramNode',
       position: { x: catX, y: catY },
-      data: { label: cat.title }
+      data: { 
+        label: cat.title,
+        description: 'Subject category group',
+        category: 'group'
+      }
     })
 
     // Connect Root -> Category
     edges.push({
       id: `e-root-${catId}`,
       source: 'root',
-      target: catId
+      target: catId,
+      animated: true,
+      type: 'smoothstep'
     })
 
     // Detect if this entire category represents a sequence/progression or independent facts
@@ -227,8 +256,13 @@ export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: a
 
       nodes.push({
         id: itemId,
+        type: 'diagramNode',
         position: { x: itemX, y: itemY },
-        data: { label: displayLabel }
+        data: { 
+          label: displayLabel,
+          description: 'Key point / extracted fact',
+          category: isSequential ? 'process' : 'output'
+        }
       })
 
       if (isSequential) {
@@ -236,7 +270,9 @@ export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: a
         edges.push({
           id: `e-${prevNodeId}-${itemId}`,
           source: prevNodeId,
-          target: itemId
+          target: itemId,
+          animated: true,
+          type: 'smoothstep'
         })
         prevNodeId = itemId
       } else {
@@ -244,7 +280,9 @@ export function generateFallbackDiagram(notes: string): { nodes: any[]; edges: a
         edges.push({
           id: `e-${catId}-${itemId}`,
           source: catId,
-          target: itemId
+          target: itemId,
+          animated: true,
+          type: 'smoothstep'
         })
       }
     })
