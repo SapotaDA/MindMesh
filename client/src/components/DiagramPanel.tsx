@@ -52,18 +52,35 @@ function DiagramContent({
 
       setIsExporting(true)
 
-      // 1. We must use React Flow's internal math engine to get the exact bounds
-      // @ts-ignore
-      const { getNodesBounds, getViewportForBounds } = await import('reactflow')
-      
-      const nodesBounds = getNodesBounds(currentNodes)
-      
-      const padding = 150
-      const width = nodesBounds.width + padding * 2
-      const height = nodesBounds.height + padding * 2
+      // Calculate perfect bounds by reading the TRUE physical dimensions from the DOM!
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
 
-      // Calculate perfect transform to center and scale everything
-      const transform = getViewportForBounds(nodesBounds, width, height, 0.1, 5, 0)
+      currentNodes.forEach(node => {
+        const x = node.position.x
+        const y = node.position.y
+        
+        // Target the physical DOM node to get its true dynamic height
+        const el = document.querySelector(`[data-id="${node.id}"]`) as HTMLElement
+        const w = el ? el.offsetWidth : (node.width ?? 250)
+        const h = el ? el.offsetHeight : (node.height ?? 150)
+        
+        if (x < minX) minX = x
+        if (y < minY) minY = y
+        if (x + w > maxX) maxX = x + w
+        if (y + h > maxY) maxY = y + h
+      })
+
+      const padding = 120
+      const graphW = maxX - minX
+      const graphH = maxY - minY
+      
+      const width = graphW + padding * 2
+      const height = graphH + padding * 2
+
+      // Compute scale so the whole graph fits inside the exact dimensions
+      const scale = 1 // 1x scale ensures crisp resolution
+      const tx = padding - minX
+      const ty = padding - minY
       
       const flowElement = document.querySelector('.react-flow__viewport') as HTMLElement
       if (!flowElement) return
@@ -75,9 +92,8 @@ function DiagramContent({
         style: {
           width: `${width}px`,
           height: `${height}px`,
-          transform: `translate(${transform.x + padding}px, ${transform.y + padding}px) scale(${transform.zoom})`,
+          transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
           transformOrigin: 'top left',
-          // CRITICAL FIX: Forces html-to-image clone to ignore original container constraints
           position: 'absolute',
           top: '0',
           left: '0'
