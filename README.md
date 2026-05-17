@@ -33,26 +33,25 @@ graph TD
 
 ---
 
-## 🚀 Intelligent Layout Engine
+## 🚀 Premium Intelligent Layout & Parsing Engine
 
-Unlike basic flowchart systems that output messy piles of overlapping nodes, MindMesh AI features an **intelligent hierarchical spacing engine**:
+Unlike basic flowchart systems, MindMesh AI features an **advanced logical layout parser** and **rich visual schema**:
 
-| Node Level | Placement Strategy | Grid / Math Rules |
-| :--- | :--- | :--- |
-| **Root Node** | Centralized anchor | Fixed at coordinates `x: 0, y: 0` |
-| **Category Nodes** | Horizontal branching | Balanced along the X-axis (`x: -600, -300, 0, 300, 600`) at `y: 150` |
-| **Detail Nodes** | Vertical cascade chains | Nested directly beneath parent category `X` coordinates at `y: 300, 450, 600...` |
+*   **Smart Sentence-Splitting Preprocessor**: Automatically breaks down dense, continuous paragraphs of text into distinct, logically flowing sentences.
+*   **Rich Category Node Tagging**: Renders dynamic glowing cards based on semantic categories:
+    *   `📥 Input` (Emerald) — Starting root nodes
+    *   `📦 Group` (Slate) — Subject category headers
+    *   `⚙️ Process` (Indigo) — Sequential workflow steps
+    *   `📤 Output` (Rose) — Fanned-out parallel facts
+    *   `⚡ Decision` (Amber) — Conditional logic
+*   **Detailed Sub-Descriptions**: Renders secondary contextual text below labels without cluttering the flowchart view.
+*   **Animated Smoothstep Edges**: Connects nodes with perfectly orthogonal, pulsing animated transition lines instead of rigid static edges.
 
 ---
 
-## 🔧 Production-Ready Backend Audit
+## 🔧 NPM Workspaces Monorepo Architecture
 
-The backend server is built to be robust, secure, and production-ready:
-1.  **Stable LLM Base**: Powered by standard production-grade `gemini-2.0-flash`.
-2.  **Strict Schema Enforcement**: Utilizes `responseMimeType: 'application/json'` to guarantee standard JSON payloads.
-3.  **Automatic Retries**: Implements a 3-attempt request loop to transparently recover from transient API limits or network drops.
-4.  **Error Interceptor**: Cleanly translates complex, raw Google AI Studio quota metrics into elegant, human-readable instructions.
-5.  **Strict Security**: Strictly isolates API keys inside `.env` configurations that are blocked from ever leaking via git tracking.
+MindMesh AI is structured as a professional **NPM Workspaces Monorepo**. This elegantly binds the Vite frontend (`client/`) and Express backend (`server/`) into a single cohesive project, allowing you to run both servers concurrently with one command.
 
 ---
 
@@ -62,61 +61,42 @@ The backend server is built to be robust, secure, and production-ready:
 *   **Node.js**: v18 or later
 *   **Gemini API Key**: Secure from [Google AI Studio](https://aistudio.google.com/)
 
----
-
-### 1️⃣ Backend Setup (`server/`)
+### 1️⃣ Environment Variables Setup
+You must configure the environment variables for both the client and server.
 ```bash
-# Navigate to backend folder
+# Backend Env
 cd server
+cp .env.example .env  # Add your GEMINI_API_KEY inside
 
-# Create env file and input your Gemini API Key
-cp .env.example .env
-
-# Install dependencies and start hot-reload development server
-npm install
-npm run dev
+# Frontend Env
+cd ../client
+cp .env.example .env  # Maps VITE_API_URL
+cd ..
 ```
 
-*   **Service Port**: Runs on [http://localhost:3001](http://localhost:3001)
-*   **Environment Configuration** (`server/.env`):
-    *   `GEMINI_API_KEY` (Required)
-    *   `PORT` (Optional, Default: `3001`)
+### 2️⃣ Install & Run (Single Unified Command)
+Thanks to the monorepo setup, you can install dependencies and launch both the frontend and backend simultaneously from the root directory!
 
----
-
-### 2️⃣ Frontend Setup (`client/`)
-In a new terminal:
 ```bash
-# Navigate to frontend folder
-cd client
-
-# Create env file and map target API URL
-cp .env.example .env
-
-# Install dependencies and launch Vite dev server
+# Install all dependencies across the entire workspace
 npm install
+
+# Start both Vite (frontend) and Express (backend) development servers concurrently!
 npm run dev
 ```
 
-*   **Client Address**: Active at [http://localhost:5173](http://localhost:5173)
-*   **Environment Configuration** (`client/.env`):
-    *   `VITE_API_URL` (Optional, Default: `http://localhost:3001`)
+*   **Client Interface**: Active at [http://localhost:5173](http://localhost:5173)
+*   **Backend API**: Running on [http://localhost:3001](http://localhost:3001)
 
 ---
 
 ## 📦 Production Builds
 
-To compile and package the assets for high-performance deployments:
+To compile and package the assets for high-performance deployments, run the unified build command from the root directory:
 
-*   **Build Frontend Bundle**:
-    ```bash
-    cd client
-    npm run build
-    ```
-*   **Compile Backend TypeScript**:
-    ```bash
-    cd server
-    npm run build
-    ```
+```bash
+# Compiles both the backend TypeScript files and the frontend Vite assets sequentially
+npm run build
+```
 
 
