@@ -5,6 +5,7 @@ import DiagramPanel from '../components/DiagramPanel'
 import GlassCard from '../components/GlassCard'
 
 import { generateDiagram } from '../api/generateDiagram'
+import { getLayoutedElements } from '../utils/layout'
 import { toast } from '../utils/toast'
 
 
@@ -25,19 +26,26 @@ export default function HomePage() {
     setIsLoading(true)
     try {
       const diagram = await generateDiagram(trimmed)
-      setNodes(
-        diagram.nodes.map((n: any) => ({
-          ...n,
-          type: 'diagramNode'
-        }))
+      
+      const rawNodes = diagram.nodes.map((n: any) => ({
+        ...n,
+        type: 'diagramNode'
+      }))
+      
+      const rawEdges = diagram.edges.map((e: any, idx: number) => ({
+        ...e,
+        id: e.id || `e-${e.source}-${e.target}-${idx}`,
+        animated: true
+      }))
+
+      // Apply dagre auto-layout for perfect readability
+      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+        rawNodes,
+        rawEdges
       )
-      setEdges(
-        diagram.edges.map((e: any, idx: number) => ({
-          ...e,
-          id: e.id || `e-${e.source}-${e.target}-${idx}`,
-          animated: true
-        }))
-      )
+
+      setNodes(layoutedNodes)
+      setEdges(layoutedEdges)
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to generate diagram'
       setError(message)
