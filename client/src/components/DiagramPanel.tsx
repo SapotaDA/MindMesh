@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ReactFlow, {
   Background,
   Controls,
   MiniMap,
   ReactFlowProvider,
   useReactFlow,
-  useStore
+  useStore,
+  getNodesBounds,
+  getViewportForBounds
 } from 'reactflow'
 
 import type { Node, Edge } from 'reactflow'
@@ -14,6 +16,9 @@ import jsPDF from 'jspdf'
 
 import LoadingOverlay from './LoadingOverlay'
 import DiagramNode from './DiagramNode'
+
+// Defined at module scope so React Flow gets a stable reference across renders/HMR
+const nodeTypes = { diagramNode: DiagramNode }
 
 function DiagramContent({
   nodes,
@@ -24,7 +29,6 @@ function DiagramContent({
   edges: Edge[]
   isLoading: boolean
 }) {
-  const nodeTypes = useMemo(() => ({ diagramNode: DiagramNode }), [])
   
   const flowWrapper = useRef<HTMLDivElement | null>(null)
   const { fitView, getNodes } = useReactFlow()
@@ -52,51 +56,36 @@ function DiagramContent({
 
       setIsExporting(true)
 
-      // Calculate perfect bounds by reading the TRUE physical dimensions from the DOM!
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      // Use React Flow's official utilities to compute perfect bounds & viewport
+      const nodesBounds = getNodesBounds(currentNodes)
 
-      currentNodes.forEach(node => {
-        const x = node.position.x
-        const y = node.position.y
-        
-        // Target the physical DOM node to get its true dynamic height
-        const el = document.querySelector(`[data-id="${node.id}"]`) as HTMLElement
-        const w = el ? el.offsetWidth : (node.width ?? 250)
-        const h = el ? el.offsetHeight : (node.height ?? 150)
-        
-        if (x < minX) minX = x
-        if (y < minY) minY = y
-        if (x + w > maxX) maxX = x + w
-        if (y + h > maxY) maxY = y + h
-      })
+      // Add generous padding around the diagram content
+      const PADDING = 100
+      const imageWidth = nodesBounds.width + PADDING * 2
+      const imageHeight = nodesBounds.height + PADDING * 2
 
-      const padding = 120
-      const graphW = maxX - minX
-      const graphH = maxY - minY
-      
-      const width = graphW + padding * 2
-      const height = graphH + padding * 2
+      // Compute the exact viewport transform that fits all nodes into the image
+      const viewport = getViewportForBounds(
+        nodesBounds,
+        imageWidth,
+        imageHeight,
+        0.5,  // minZoom
+        2,    // maxZoom
+        0.15  // relative padding inside the computed viewport
+      )
 
-      // Compute scale so the whole graph fits inside the exact dimensions
-      const scale = 1 // 1x scale ensures crisp resolution
-      const tx = padding - minX
-      const ty = padding - minY
-      
       const flowElement = document.querySelector('.react-flow__viewport') as HTMLElement
       if (!flowElement) return
 
       const dataUrl = await htmlToImage.toPng(flowElement, {
         backgroundColor: '#070A12',
-        width,
-        height,
+        width: imageWidth,
+        height: imageHeight,
         style: {
-          width: `${width}px`,
-          height: `${height}px`,
-          transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
+          width: `${imageWidth}px`,
+          height: `${imageHeight}px`,
+          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
           transformOrigin: 'top left',
-          position: 'absolute',
-          top: '0',
-          left: '0'
         }
       })
 
@@ -107,11 +96,11 @@ function DiagramContent({
         link.click()
       } else if (format === 'pdf') {
         const pdf = new jsPDF({
-          orientation: width > height ? 'landscape' : 'portrait',
+          orientation: imageWidth > imageHeight ? 'landscape' : 'portrait',
           unit: 'px',
-          format: [width, height]
+          format: [imageWidth, imageHeight]
         })
-        pdf.addImage(dataUrl, 'PNG', 0, 0, width, height)
+        pdf.addImage(dataUrl, 'PNG', 0, 0, imageWidth, imageHeight)
         pdf.save('mindmesh-diagram.pdf')
       }
     } catch (err) {
