@@ -86,13 +86,23 @@ export default function NotesInputCard({
       </div>
 
       <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="text-xs text-white/60">
-          Tip: Use headings, numbered steps, or bullet points.
+        <div className="flex flex-col gap-1 text-xs text-white/60">
+          <div>Tip: Use headings, numbered steps, or bullet points.</div>
+          {!isEmpty && (
+            <div className="text-[10px] text-white/40 tracking-wider">
+              {value.length} characters | {value.trim().split(/\s+/).filter(Boolean).length} words
+            </div>
+          )}
         </div>
         <button
           onClick={onGenerate}
           disabled={isLoading || isEmpty}
-          className="group inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-500/30 via-fuchsia-500/25 to-cyan-500/30 border border-white/15 hover:border-white/25 hover:shadow-glow transition disabled:opacity-50"
+          className={
+            "group inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-indigo-500/30 via-fuchsia-500/25 to-cyan-500/30 border transition disabled:opacity-50 " +
+            (!isLoading && !isEmpty
+              ? "border-indigo-400/40 hover:border-indigo-400/60 shadow-[0_0_20px_rgba(99,102,241,0.15)] hover:shadow-[0_0_25px_rgba(99,102,241,0.3)] shadow-indigo-500/20"
+              : "border-white/15 hover:border-white/25")
+          }
           type="button"
         >
           <Sparkles className="h-4 w-4 text-indigo-200 group-hover:animate-float" />
