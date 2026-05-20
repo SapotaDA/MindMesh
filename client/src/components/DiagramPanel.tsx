@@ -6,9 +6,8 @@ import ReactFlow, {
   ReactFlowProvider,
   useReactFlow,
   useStore,
-  getNodesBounds,
-  getViewportForBounds
 } from 'reactflow'
+import { getNodesBounds, getViewportForBounds } from '@reactflow/core'
 
 import type { Node, Edge } from 'reactflow'
 import * as htmlToImage from 'html-to-image'

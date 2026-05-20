@@ -5,6 +5,13 @@
     "reactflow",
     "mindmesh",
     "glassmorphic",
-    "smoothstep"
+    "smoothstep",
+    "dagre",
+    "graphlib",
+    "rankdir",
+    "layouted",
+    "Layouted",
+    "ntvs",
+    "njsproj"
   ]
 }
